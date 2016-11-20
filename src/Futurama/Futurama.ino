@@ -25,6 +25,9 @@
 #define RED_BACKLIGHT 9  // PWM output
 #define GREEN_BACKLIGHT 10  // PWM output
 #define BLUE_BACKLIGHT 11  // PWM output
+int red = 0;
+int green = 0;
+int blue = 0;
 
 // 7-segment numeric display to show the user's score
 Adafruit_7segment scoreboard = Adafruit_7segment();
@@ -40,6 +43,16 @@ ST7565 glcd(8, 7, 6, 5, 4);
 
 void setup() {
   Serial.begin(9600);
+  // code for graphic LCD
+  #ifdef __AVR__
+    Serial.print(freeRam());
+  #endif
+  // initialize graphic LCD and set the contrast to 0x18
+  glcd.begin(0x18);
+
+  glcd.display(); // show splashscreen
+  delay(2000);
+  glcd.clear();
 
   // Set pin modes
   pinMode(SPEED_POTENTIOMETER, INPUT);
@@ -55,9 +68,61 @@ void setup() {
 }
 
 void loop() {
+  colorCycle();
+
   score++;
   scoreboard.print(score);
   scoreboard.writeDisplay();
   delay(20);
 }
 
+/*
+ * The code for setColor() is based on code from the Adafruit RGB LED tutorial.
+ * https://learn.adafruit.com/adafruit-arduino-lesson-3-rgb-leds/arduino-sketch
+ */
+void setColor(int red, int green, int blue) {
+  #ifdef COMMON_ANODE
+    red = 255 - red;
+    green = 255 - green;
+    blue = 255 - blue;
+  #endif
+  analogWrite(RED_BACKLIGHT, red);
+  analogWrite(GREEN_BACKLIGHT, green);
+  analogWrite(BLUE_BACKLIGHT, blue);  
+}
+
+void colorCycle() {
+  // cycle through backlight colors
+  setColor(255, 0, 0);  // red
+  delay(100);
+  setColor(0, 255, 0);  // green
+  delay(100);
+  setColor(0, 0, 255);  // blue
+  delay(100);
+  setColor(255, 255, 0);  // yellow
+  delay(100);  
+  setColor(80, 0, 80);  // purple
+  delay(100);
+  setColor(0, 255, 255);  // aqua
+  delay(100);
+}
+
+/*
+ * The code for freeRam() comes from the Adafruit ST7565 example.
+ * https://github.com/adafruit/ST7565-LCD/blob/master/ST7565/examples/st7565lcd/st7565lcd.pde
+ */
+#ifdef __AVR__
+// this handy function will return the number of bytes currently free in RAM, great for debugging!   
+int freeRam(void) {
+  extern int  __bss_end; 
+  extern int  *__brkval; 
+  int free_memory; 
+  if((int)__brkval == 0) {
+    free_memory = ((int)&free_memory) - ((int)&__bss_end); 
+  }
+  else {
+    free_memory = ((int)&free_memory) - ((int)__brkval); 
+  }
+  return free_memory; 
+} 
+#endif
