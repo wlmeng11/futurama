@@ -14,6 +14,7 @@
 #include <Wire.h>
 #include "Adafruit_LEDBackpack.h"
 #include "Adafruit_GFX.h"
+#include "ST7565.h"
 
 // Input Pin assignments
 #define SPEED_POTENTIOMETER 0  // analog input
@@ -25,8 +26,17 @@
 #define GREEN_BACKLIGHT 10  // PWM output
 #define BLUE_BACKLIGHT 11  // PWM output
 
+// 7-segment numeric display to show the user's score
 Adafruit_7segment scoreboard = Adafruit_7segment();
 uint16_t score = 0;
+
+// Graphic LCD for playing the game
+// pin 8 - Serial data out (SID)
+// pin 7 - Serial clock out (SCLK)
+// pin 6 - Data/Command select (RS or A0)
+// pin 5 - LCD reset (RST)
+// pin 4 - LCD chip select (CS)
+ST7565 glcd(8, 7, 6, 5, 4);
 
 void setup() {
   Serial.begin(9600);
