@@ -43,13 +43,16 @@ ST7565 glcd(8, 7, 6, 5, 4);
 
 void setup() {
   Serial.begin(9600);
+  Serial.println("Welcome to Futurama!");
   // code for graphic LCD
   #ifdef __AVR__
-    Serial.print(freeRam());
+    Serial.print("Bytes of RAM available: ");
+    Serial.println(freeRam());
   #endif
   // initialize graphic LCD and set the contrast to 0x18
   glcd.begin(0x18);
 
+  setColor(255,0,0);  // set backlight to red
   glcd.display(); // show splashscreen
   delay(2000);
   glcd.clear();
@@ -65,10 +68,16 @@ void setup() {
   scoreboard.begin(0x70);  // connect to numeric display at I2C address 0x70
   scoreboard.print(score);
   scoreboard.writeDisplay();
+
 }
 
 void loop() {
-  colorCycle();
+  if (digitalRead(RED_BUTTON) == LOW) {
+    Serial.println("Red button pressed!");
+  }
+  glcd.fillrect(5, 5, 10, 10, BLACK);
+  glcd.display();
+  glcd.clear();
 
   score++;
   scoreboard.print(score);
@@ -89,22 +98,6 @@ void setColor(int red, int green, int blue) {
   analogWrite(RED_BACKLIGHT, red);
   analogWrite(GREEN_BACKLIGHT, green);
   analogWrite(BLUE_BACKLIGHT, blue);  
-}
-
-void colorCycle() {
-  // cycle through backlight colors
-  setColor(255, 0, 0);  // red
-  delay(100);
-  setColor(0, 255, 0);  // green
-  delay(100);
-  setColor(0, 0, 255);  // blue
-  delay(100);
-  setColor(255, 255, 0);  // yellow
-  delay(100);  
-  setColor(80, 0, 80);  // purple
-  delay(100);
-  setColor(0, 255, 255);  // aqua
-  delay(100);
 }
 
 /*
