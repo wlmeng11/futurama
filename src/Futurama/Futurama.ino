@@ -18,8 +18,7 @@
 
 // Input Pin assignments
 #define SPEED_POTENTIOMETER 0  // analog input
-#define RED_BUTTON 12  // digital input
-#define GREEN_BUTTON 13  // digital input
+#define RED_BUTTON 13  // digital input
 
 // Output Pin assignments
 #define RED_BACKLIGHT 9  // PWM output
@@ -28,18 +27,24 @@
 int red = 0;
 int green = 0;
 int blue = 0;
+#define COMMON_ANODE
 
 // 7-segment numeric display to show the user's score
 Adafruit_7segment scoreboard = Adafruit_7segment();
 uint16_t score = 0;
 
-// Graphic LCD for playing the game
-// pin 8 - Serial data out (SID)
-// pin 7 - Serial clock out (SCLK)
-// pin 6 - Data/Command select (RS or A0)
-// pin 5 - LCD reset (RST)
-// pin 4 - LCD chip select (CS)
+/* Graphic LCD for playing the game
+ *  Dimensions: 128x64 pixels
+ *  pin 8 - Serial data out (SID)
+ *  pin 7 - Serial clock out (SCLK)
+ *  pin 6 - Data/Command select (RS or A0)
+ *  pin 5 - LCD reset (RST)
+ *  pin 4 - LCD chip select (CS)
+*/
 ST7565 glcd(8, 7, 6, 5, 4);
+
+int x = 0;
+int y = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -60,7 +65,6 @@ void setup() {
   // Set pin modes
   pinMode(SPEED_POTENTIOMETER, INPUT);
   pinMode(RED_BUTTON, INPUT_PULLUP);
-  pinMode(GREEN_BUTTON, INPUT_PULLUP);
   pinMode(RED_BACKLIGHT, OUTPUT);
   pinMode(GREEN_BACKLIGHT, OUTPUT);
   pinMode(BLUE_BACKLIGHT, OUTPUT);
@@ -74,8 +78,14 @@ void setup() {
 void loop() {
   if (digitalRead(RED_BUTTON) == LOW) {
     Serial.println("Red button pressed!");
+    if(getSpeed() >= 512) {
+      x++;
+    }
+    else {
+      y++;
+    }
   }
-  glcd.fillrect(5, 5, 10, 10, BLACK);
+  glcd.fillrect(x%128, y%64, 10, 10, BLACK);
   glcd.display();
   glcd.clear();
 
@@ -84,6 +94,15 @@ void loop() {
   scoreboard.writeDisplay();
   delay(20);
 }
+
+/*
+ * Returns the speed setting as an integer from 0 to 1023
+ */
+ int getSpeed() {
+  int speed_setting = analogRead(SPEED_POTENTIOMETER);
+  Serial.print("Speed: "); Serial.println(speed_setting);
+  return speed_setting;
+ }
 
 /*
  * The code for setColor() is based on code from the Adafruit RGB LED tutorial.
