@@ -15,6 +15,7 @@
 #include "Adafruit_LEDBackpack.h"
 #include "Adafruit_GFX.h"
 #include "ST7565.h"
+#include "LinkedList.h"
 
 // Input Pin assignments
 #define SPEED_POTENTIOMETER 0  // analog input
@@ -41,10 +42,19 @@ uint16_t score = 0;
  *  pin 5 - LCD reset (RST)
  *  pin 4 - LCD chip select (CS)
 */
-ST7565 glcd(8, 7, 6, 5, 4);
+ST7565 glcd = ST7565(8, 7, 6, 5, 4);
 
 int x = 0;
 int y = 0;
+int length = 40;
+int level = 1;
+int height = 5;
+bool direction = true;
+int left_y;
+int right_y;
+LinkedList<int> listX = LinkedList<int>();
+LinkedList<int> listY = LinkedList<int>();
+LinkedList<int> listLength = LinkedList<int>();
 
 void setup() {
   Serial.begin(9600);
@@ -57,9 +67,9 @@ void setup() {
   // initialize graphic LCD and set the contrast to 0x18
   glcd.begin(0x18);
 
-  setColor(255,0,0);  // set backlight to red
+  setColor(255,100,255);  // set backlight to red
   glcd.display(); // show splashscreen
-  delay(2000);
+  delay(6000);
   glcd.clear();
 
   // Set pin modes
@@ -76,23 +86,66 @@ void setup() {
 }
 
 void loop() {
-  if (digitalRead(RED_BUTTON) == LOW) {
-    Serial.println("Red button pressed!");
-    if(getSpeed() >= 512) {
-      x++;
-    }
-    else {
-      y++;
-    }
+  if(y+length == 64) { //handles direction of box movement
+    direction = true;
+  } else if (y == 0) {
+    direction = false;
   }
-  glcd.fillrect(x%128, y%64, 10, 10, BLACK);
+
+  if(direction) { //Changes y movement
+    y--;
+  } else {
+    y++;
+  }
+
+  if(level != 1) {
+    glcd.fillrect((128-((level-1)*height))%128, y%64, height, length, BLACK);
+  }
+  
   glcd.display();
   glcd.clear();
-
-  score++;
   scoreboard.print(score);
   scoreboard.writeDisplay();
-  delay(20);
+  delay(getSpeed()/5);
+  
+  if (digitalRead(RED_BUTTON) == LOW) {
+    Serial.println("Red button pressed!");
+    if(level > 2) {
+      left_y = listY.get(level-2) + listLength.get(level-2);
+      right_y = listY.get(level-2);
+            
+      if(y < right_y && (y+length) < left_y) { 
+        length -= (right_y - y);               
+        y = right_y;
+      } else if(y > right_y &&(y+length) > left_y) {
+        length -= (y + length - left_y);
+        y = left_y - length;
+      }
+    }
+    if(length > 0) {
+      setColor(255, length*6, length*6);
+    } else {
+      end();
+    }
+    
+    listX.add(128-((score)*height));
+    listY.add(y%64);
+    listLength.add(length);
+    
+    
+    if(level < 15) { //20 is the max number of levels displayed
+      level++;
+    } else {
+      listX.remove(0);
+      listY.remove(0);
+      listLength.remove(0);
+    }
+    score++;
+  }
+
+  for (int i = 0; i < listX.size(); i++) {
+    glcd.fillrect(128-listX.get(0)+listX.get(i), listY.get(i), height, listLength.get(i), BLACK);
+  }
 }
 
 /*
@@ -102,6 +155,27 @@ void loop() {
   int speed_setting = analogRead(SPEED_POTENTIOMETER);
   Serial.print("Speed: "); Serial.println(speed_setting);
   return speed_setting;
+ }
+
+ void end() {
+  while(true) {
+    setColor(255,0,0);
+    int size_stack = listX.size();
+    for (int i = 0; i < size_stack; i++) {
+      for (int j = 0; j < listX.size(); j++) {
+        glcd.fillrect(128-listX.get(0)+listX.get(j), listY.get(j), height, listLength.get(j), BLACK);
+      }
+      listX.remove(listX.size()-1);
+      listY.remove(listX.size()-1);
+      listLength.remove(listX.size()-1);
+      glcd.display();
+      glcd.clear();
+      delay(getSpeed()/5);
+    }
+  }
+  glcd.display();
+  glcd.clear();
+  delay(getSpeed()/5);
  }
 
 /*
@@ -118,7 +192,6 @@ void setColor(int red, int green, int blue) {
   analogWrite(GREEN_BACKLIGHT, green);
   analogWrite(BLUE_BACKLIGHT, blue);  
 }
-
 /*
  * The code for freeRam() comes from the Adafruit ST7565 example.
  * https://github.com/adafruit/ST7565-LCD/blob/master/ST7565/examples/st7565lcd/st7565lcd.pde
